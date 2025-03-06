@@ -1,0 +1,220 @@
+<!DOCTYPE html> <!-- 文档类型声明 -->
+<html lang="en"> <!-- HTML根元素，设置语言为英语 -->
+	<head> <!-- 头部信息区域 -->
+		<meta charset="utf-8"> <!-- 设置字符编码为UTF-8 -->
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0"> <!-- 设置视口以优化移动设备显示 -->
+		<title>Boxx</title> <!-- 页面标题，将被Godot项目名称替换 -->
+		<style> <!-- CSS样式开始 -->
+html, body, #canvas {
+	margin: 0; /* 移除边距 */
+	padding: 0; /* 移除内边距 */
+	border: 0; /* 移除边框 */
+}
+
+body {
+	color: white; /* 文字颜色设为白色 */
+	background-color: #fffce7; /* 背景颜色设为黑色 */
+	overflow: hidden; /* 隐藏滚动条 */
+	touch-action: none; /* 禁用浏览器的默认触摸行为 */
+}
+
+#canvas {
+	display: block; /* 将画布设置为块级元素 */
+}
+
+#canvas:focus {
+	outline: none; /* 移除画布获得焦点时的轮廓 */
+}
+
+#status, #status-splash, #status-progress {
+	position: absolute; /* 绝对定位 */
+	left: 0; /* 左边缘对齐 */
+	right: 0; /* 右边缘对齐 */
+}
+
+#status, #status-splash {
+	top: 0; /* 顶部对齐 */
+	bottom: 0; /* 底部对齐 */
+}
+
+#status {
+	background-color: Boxx_v.0.1.3.png_COLOR; /* 背景颜色将被Godot设置替换 */
+	display: flex; /* 使用Flex布局 */
+	flex-direction: column; /* 垂直排列子元素 */
+	justify-content: center; /* 垂直居中 */
+	align-items: center; /* 水平居中 */
+	visibility: hidden; /* 初始状态为隐藏 */
+}
+
+#status-splash {
+	max-height: 100%; /* 最大高度为父容器的100% */
+	max-width: 100%; /* 最大宽度为父容器的100% */
+	margin: auto; /* 自动边距使其居中 */
+}
+
+#status-splash.show-image--false {
+	display: none; /* 当show-image类设为false时隐藏启动图像 */
+}
+
+#status-splash.fullsize--true {
+	height: 100%; /* 占满高度 */
+	width: 100%; /* 占满宽度 */
+	object-fit: contain; /* 保持图像比例 */
+}
+
+#status-splash.use-filter--false {
+	image-rendering: pixelated; /* 禁用图像平滑，保持像素风格 */
+}
+
+#status-progress, #status-notice {
+	display: none; /* 初始状态为隐藏 */
+}
+
+#status-progress {
+	bottom: 10%; /* 距底部10% */
+	width: 50%; /* 宽度为50% */
+	margin: 0 auto; /* 水平居中 */
+}
+
+#status-notice {
+	background-color: #5b3943; /* 深红色背景 */
+	border-radius: 0.5rem; /* 圆角边框 */
+	border: 1px solid #9b3943; /* 红色边框 */
+	color: #e0e0e0; /* 浅灰色文字 */
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif; /* 字体设置 */
+	line-height: 1.3; /* 行高 */
+	margin: 0 2rem; /* 左右边距 */
+	overflow: hidden; /* 隐藏溢出内容 */
+	padding: 1rem; /* 内边距 */
+	text-align: center; /* 文本居中 */
+	z-index: 1; /* 层级设置 */
+}
+		</style> <!-- CSS样式结束 -->
+		<link id="-gd-engine-icon" rel="icon" type="image/png" href="Boxx_v.0.1.3.icon.png" />
+<link rel="apple-touch-icon" href="Boxx_v.0.1.3.apple-touch-icon.png"/>
+ <!-- Godot可能插入的额外头部代码 -->
+	</head>
+	<body> <!-- 页面主体开始 -->
+		<canvas id="canvas"> <!-- Godot游戏的画布元素 -->
+			Your browser does not support the canvas tag. <!-- 浏览器不支持canvas时显示的消息 -->
+		</canvas>
+
+		<noscript> <!-- 当浏览器禁用JavaScript时显示 -->
+			Your browser does not support JavaScript. <!-- JavaScript被禁用时的提示 -->
+		</noscript>
+
+		<div id="status"> <!-- 状态显示容器 -->
+			<img id="status-splash" class="Boxx_v.0.1.3.png_CLASSES" src="Boxx_v.0.1.3.png" alt=""> <!-- 启动画面图像 -->
+			<progress id="status-progress"></progress> <!-- 加载进度条 -->
+			<div id="status-notice"></div> <!-- 状态通知区域 -->
+		</div>
+
+		<script src="Boxx_v.0.1.3.js"></script> <!-- 引入Godot引擎JavaScript文件 -->
+		<script> <!-- 主脚本开始 -->
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"Boxx_v.0.1.3","experimentalVK":false,"fileSizes":{"Boxx_v.0.1.3.pck":60016,"Boxx_v.0.1.3.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]}; // Godot配置对象
+const GODOT_THREADS_ENABLED = false; // 是否启用多线程
+const engine = new Engine(GODOT_CONFIG); // 创建Godot引擎实例
+
+(function () { // 自执行匿名函数
+	const statusOverlay = document.getElementById('status'); // 获取状态覆盖层元素
+	const statusProgress = document.getElementById('status-progress'); // 获取进度条元素
+	const statusNotice = document.getElementById('status-notice'); // 获取通知元素
+
+	let initializing = true; // 初始化标志
+	let statusMode = ''; // 状态模式
+
+	function setStatusMode(mode) { // 设置状态显示模式的函数
+		if (statusMode === mode || !initializing) { // 如果模式相同或已初始化完成则返回
+			return;
+		}
+		if (mode === 'hidden') { // 如果模式为隐藏
+			statusOverlay.remove(); // 移除状态覆盖层
+			initializing = false; // 初始化完成
+			return;
+		}
+		statusOverlay.style.visibility = 'visible'; // 显示状态覆盖层
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none'; // 根据模式显示或隐藏进度条
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none'; // 根据模式显示或隐藏通知
+		statusMode = mode; // 更新状态模式
+	}
+
+	function setStatusNotice(text) { // 设置状态通知文本的函数
+		while (statusNotice.lastChild) { // 清空当前通知内容
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n'); // 按换行分割文本
+		lines.forEach((line) => { // 处理每一行文本
+			statusNotice.appendChild(document.createTextNode(line)); // 添加文本节点
+			statusNotice.appendChild(document.createElement('br')); // 添加换行
+		});
+	}
+
+	function displayFailureNotice(err) { // 显示错误通知的函数
+		console.error(err); // 在控制台输出错误
+		if (err instanceof Error) { // 如果是Error对象
+			setStatusNotice(err.message); // 显示错误信息
+		} else if (typeof err === 'string') { // 如果是字符串
+			setStatusNotice(err); // 直接显示
+		} else { // 其他情况
+			setStatusNotice('An unknown error occurred.'); // 显示未知错误
+		}
+		setStatusMode('notice'); // 设置为通知模式
+		initializing = false; // 初始化完成
+	}
+
+	const missing = Engine.getMissingFeatures({ // 检查缺少的功能特性
+		threads: GODOT_THREADS_ENABLED, // 是否需要多线程支持
+	});
+
+	if (missing.length !== 0) { // 如果缺少必要功能
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) { // 如果配置启用了服务工作线程且浏览器支持
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration(); // 获取服务工作线程注册
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.')); // 注册失败
+			}
+			// 尝试安装服务工作线程以解决问题
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) { // 如果已存在服务工作线程
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()), // 安装服务工作线程
+				// getRegistration()可能会卡住，设置超时
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				// 如果没有错误则重新加载页面
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err); // 输出错误信息
+			});
+		} else { // 如果不支持或未配置服务工作线程
+			// 显示常规错误消息
+			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			displayFailureNotice(missingMsg + missing.join('\n')); // 显示缺少的功能列表
+		}
+	} else { // 如果所有功能都支持
+		setStatusMode('progress'); // 设置为进度条模式
+		engine.startGame({ // 启动游戏
+			'onProgress': function (current, total) { // 进度回调
+				if (current > 0 && total > 0) { // 如果有进度信息
+					statusProgress.value = current; // 设置当前进度
+					statusProgress.max = total; // 设置总进度
+				} else { // 如果没有具体进度信息
+					statusProgress.removeAttribute('value'); // 移除value属性
+					statusProgress.removeAttribute('max'); // 移除max属性
+				}
+			},
+		}).then(() => { // 游戏启动成功
+			setStatusMode('hidden'); // 隐藏状态显示
+		}, displayFailureNotice); // 失败时显示错误
+	}
+}()); // 立即调用函数表达式结束
+		</script> <!-- 主脚本结束 -->
+	</body> <!-- 页面主体结束 -->
+</html> <!-- HTML文档结束 -->
+
